@@ -5,7 +5,8 @@ chrome.action.onClicked.addListener((tab) => {
       func: () => {
         const panel = document.getElementById("yt-rag-panel");
         if (panel) {
-          const isVisible = panel.style.display !== "none";
+          const computed = window.getComputedStyle(panel).display;
+          const isVisible = computed !== "none";
           panel.style.display = isVisible ? "none" : "flex";
         }
       }

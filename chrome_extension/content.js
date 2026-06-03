@@ -56,6 +56,7 @@
     `;
 
     document.body.appendChild(panel);
+    panel.style.display = "none";
 
     document.getElementById("yt-rag-close-btn").addEventListener("click", () => {
       panel.style.display = "none";
