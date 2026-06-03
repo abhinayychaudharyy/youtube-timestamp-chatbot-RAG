@@ -10,54 +10,62 @@
   }
 
   async function fetchTranscriptFromPage() {
-    try {
-      const scripts = document.querySelectorAll("script");
-      let playerResponse = null;
-
-      for (const script of scripts) {
-        if (script.textContent.includes("ytInitialPlayerResponse")) {
-          const match = script.textContent.match(/ytInitialPlayerResponse\s*=\s*(\{.+?\});/s);
-          if (match) {
-            playerResponse = JSON.parse(match[1]);
-            break;
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.id = "yt-rag-extractor";
+      script.textContent = `
+        (function() {
+          try {
+            const data = window.ytInitialPlayerResponse;
+            document.dispatchEvent(new CustomEvent("yt-rag-player-data", {
+              detail: data ? JSON.stringify(data) : null
+            }));
+          } catch(e) {
+            document.dispatchEvent(new CustomEvent("yt-rag-player-data", { detail: null }));
           }
+        })();
+      `;
+
+      document.addEventListener("yt-rag-player-data", async (e) => {
+        const existing = document.getElementById("yt-rag-extractor");
+        if (existing) existing.remove();
+
+        if (!e.detail) { resolve(null); return; }
+
+        try {
+          const playerResponse = JSON.parse(e.detail);
+          const captionTracks =
+            playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+
+          if (!captionTracks || captionTracks.length === 0) { resolve(null); return; }
+
+          const track =
+            captionTracks.find((t) => t.languageCode === "en") ||
+            captionTracks.find((t) => t.languageCode?.startsWith("en")) ||
+            captionTracks[0];
+
+          const url = track.baseUrl + "&fmt=json3";
+          const res = await fetch(url);
+          const data = await res.json();
+
+          const transcript = (data.events || [])
+            .filter((ev) => ev.segs)
+            .map((ev) => ({
+              text: ev.segs.map((s) => s.utf8 || "").join("").replace(/\n/g, " ").trim(),
+              start: (ev.tStartMs || 0) / 1000,
+              duration: (ev.dDurationMs || 0) / 1000,
+            }))
+            .filter((ev) => ev.text.trim().length > 0);
+
+          resolve(transcript.length > 0 ? transcript : null);
+        } catch (err) {
+          console.error("[YT-RAG] Transcript parse error:", err);
+          resolve(null);
         }
-      }
+      }, { once: true });
 
-      if (!playerResponse) return null;
-
-      const captionTracks =
-        playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-
-      if (!captionTracks || captionTracks.length === 0) return null;
-
-      const track =
-        captionTracks.find((t) => t.languageCode === "en") ||
-        captionTracks.find((t) => t.languageCode?.startsWith("en")) ||
-        captionTracks[0];
-
-      const url = track.baseUrl + "&fmt=json3";
-      const res = await fetch(url);
-      const data = await res.json();
-
-      const transcript = (data.events || [])
-        .filter((e) => e.segs)
-        .map((e) => ({
-          text: e.segs
-            .map((s) => s.utf8 || "")
-            .join("")
-            .replace(/\n/g, " ")
-            .trim(),
-          start: (e.tStartMs || 0) / 1000,
-          duration: (e.dDurationMs || 0) / 1000,
-        }))
-        .filter((e) => e.text.trim().length > 0);
-
-      return transcript.length > 0 ? transcript : null;
-    } catch (err) {
-      console.error("[YT-RAG] Transcript fetch error:", err);
-      return null;
-    }
+      document.head.appendChild(script);
+    });
   }
 
   function buildPanel() {
