@@ -1,0 +1,366 @@
+/* ============================================================
+   YouTube RAG Chatbot — Content Panel Styles
+   ============================================================ */
+
+#yt-rag-panel {
+  display: none;
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 400px;
+  height: 560px;
+  z-index: 9999999;
+  flex-direction: column;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  animation: yt-rag-slide-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes yt-rag-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(32px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+
+#yt-rag-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #212121 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
+}
+
+#yt-rag-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#yt-rag-logo {
+  width: 28px;
+  height: 28px;
+  background: #ff0000;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+#yt-rag-logo svg {
+  width: 14px;
+  height: 14px;
+  fill: white;
+}
+
+#yt-rag-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 0.01em;
+}
+
+#yt-rag-subtitle {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 1px;
+}
+
+#yt-rag-close-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+#yt-rag-close-btn:hover {
+  background: rgba(255, 80, 80, 0.2);
+  color: #ff6b6b;
+}
+
+/* ── Video Status Bar ────────────────────────────────────── */
+
+#yt-rag-video-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+}
+
+#yt-rag-video-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff0000;
+  flex-shrink: 0;
+  animation: yt-rag-pulse 2s infinite;
+}
+
+@keyframes yt-rag-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+#yt-rag-video-id-text {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: "JetBrains Mono", monospace;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Messages Area ───────────────────────────────────────── */
+
+#yt-rag-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #181818;
+}
+
+#yt-rag-messages::-webkit-scrollbar {
+  width: 4px;
+}
+
+#yt-rag-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#yt-rag-messages::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+}
+
+.yt-rag-msg-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: yt-rag-msg-in 0.2s ease both;
+}
+
+@keyframes yt-rag-msg-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.yt-rag-msg-user {
+  align-items: flex-end;
+}
+
+.yt-rag-msg-ai {
+  align-items: flex-start;
+}
+
+.yt-rag-bubble {
+  max-width: 86%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.yt-rag-bubble-user {
+  background: linear-gradient(135deg, #ff0000, #cc0000);
+  color: #ffffff;
+  border-bottom-right-radius: 4px;
+}
+
+.yt-rag-bubble-ai {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom-left-radius: 4px;
+}
+
+.yt-rag-timestamp-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 4px 10px;
+  background: rgba(255, 0, 0, 0.15);
+  border: 1px solid rgba(255, 0, 0, 0.3);
+  border-radius: 20px;
+  color: #ff6b6b;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.yt-rag-timestamp-link:hover {
+  background: rgba(255, 0, 0, 0.28);
+  color: #ff9999;
+}
+
+/* ── Thinking indicator ──────────────────────────────────── */
+
+.yt-rag-thinking {
+  display: flex;
+  gap: 5px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border-bottom-left-radius: 4px;
+  width: fit-content;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.yt-rag-thinking span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  animation: yt-rag-bounce 1.2s infinite ease-in-out;
+}
+
+.yt-rag-thinking span:nth-child(1) { animation-delay: 0s; }
+.yt-rag-thinking span:nth-child(2) { animation-delay: 0.2s; }
+.yt-rag-thinking span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes yt-rag-bounce {
+  0%, 80%, 100% { transform: scale(0.7); opacity: 0.3; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* ── Welcome message ─────────────────────────────────────── */
+
+#yt-rag-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  gap: 12px;
+  padding: 24px;
+}
+
+#yt-rag-welcome-icon {
+  font-size: 40px;
+  line-height: 1;
+}
+
+#yt-rag-welcome h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+#yt-rag-welcome p {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ── Input Area ──────────────────────────────────────────── */
+
+#yt-rag-input-area {
+  padding: 12px 14px;
+  background: #1a1a1a;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+#yt-rag-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 13px;
+  padding: 10px 12px;
+  resize: none;
+  font-family: inherit;
+  outline: none;
+  line-height: 1.4;
+  max-height: 100px;
+  transition: border-color 0.15s;
+}
+
+#yt-rag-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+#yt-rag-input:focus {
+  border-color: rgba(255, 0, 0, 0.5);
+}
+
+#yt-rag-send-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #ff0000;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.1s;
+}
+
+#yt-rag-send-btn:hover {
+  background: #cc0000;
+  transform: scale(1.05);
+}
+
+#yt-rag-send-btn:active {
+  transform: scale(0.97);
+}
+
+#yt-rag-send-btn:disabled {
+  background: rgba(255, 255, 255, 0.1);
+  cursor: not-allowed;
+  transform: none;
+}
+
+#yt-rag-send-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: white;
+}
+
+/* ── Error bubble ─────────────────────────────────────────── */
+
+.yt-rag-bubble-error {
+  background: rgba(255, 80, 80, 0.1);
+  border: 1px solid rgba(255, 80, 80, 0.25);
+  color: #ff9999;
+}
