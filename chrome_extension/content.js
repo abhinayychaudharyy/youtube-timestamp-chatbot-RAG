@@ -1,5 +1,5 @@
 (() => {
-  const BACKEND_URL = "https://youtube-timestamp-chatbot-rag.onrender.com/chat";
+  const BACKEND_URL = "https://youtube-timestamp-chatbot-rag-jqh0.onrender.com/chat";
   const PANEL_ID = "yt-rag-panel";
 
   let currentVideoId = null;
