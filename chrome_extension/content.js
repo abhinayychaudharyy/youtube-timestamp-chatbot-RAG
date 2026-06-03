@@ -1,5 +1,5 @@
 (() => {
-  const BACKEND_URL = "http://localhost:8000/chat";
+  const BACKEND_URL = "https://youtube-timestamp-chatbot-rag.onrender.com/chat";
   const PANEL_ID = "yt-rag-panel";
 
   let currentVideoId = null;
@@ -201,7 +201,7 @@
         try {
           const err = await response.json();
           detail = err.detail || detail;
-        } catch (_) {}
+        } catch (_) { }
         appendErrorMessage(detail);
       }
     } catch (err) {
