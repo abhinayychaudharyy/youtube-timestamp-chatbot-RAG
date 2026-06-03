@@ -2,11 +2,12 @@ import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.models.schema import ChatRequest
+from app.models.schema import ChatWithTranscriptRequest
 from app.services.youtube_service import YouTubeService
 from app.services.vector_store import VectorStoreService
 from app.services.rag_service import RAGService
 from app.utils.timestamp import seconds_to_time
+from langchain_core.documents import Document
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ except Exception as e:
 vector_stores_cache = {}
 
 @app.post("/chat")
-def chat(data: ChatRequest):
+def chat(data: ChatWithTranscriptRequest):
     global vector_service, rag_service
     if vector_service is None:
         vector_service = VectorStoreService()
@@ -43,53 +44,63 @@ def chat(data: ChatRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
     store = vector_stores_cache.get(video_id)
-    
-    if not store:
-        logger.info(f"Cache miss for video {video_id}. Ingesting transcript and creating vector store...")
-        try:
-            transcript = YouTubeService.get_transcript(data.video_url)
-        except Exception as e:
-            logger.error(f"Failed to retrieve transcript for video {video_id}: {e}")
-            raise HTTPException(
-                status_code=404,
-                detail=f"Could not retrieve transcript for the video. Please verify the URL and ensure transcripts/captions are enabled. Error: {str(e)}"
-            )
 
+    if not store:
+        logger.info(f"Cache miss for {video_id}. Building vector store from extension transcript...")
         try:
-            docs = YouTubeService.create_documents(transcript)
+            if not data.transcript:
+                raise ValueError("Transcript is empty.")
+
+            docs = []
+            current_text = ""
+            current_start = None
+            current_duration = 0.0
+
+            for seg in data.transcript:
+                if current_start is None:
+                    current_start = seg.start
+                current_text += seg.text + " "
+                current_duration = seg.duration
+
+                if len(current_text) >= 1000:
+                    docs.append(Document(
+                        page_content=current_text.strip(),
+                        metadata={"start": current_start, "duration": current_duration}
+                    ))
+                    current_text = ""
+                    current_start = None
+
+            if current_text.strip():
+                docs.append(Document(
+                    page_content=current_text.strip(),
+                    metadata={"start": current_start or 0.0, "duration": current_duration}
+                ))
+
             if not docs:
-                raise ValueError("Transcript is empty or has no content.")
+                raise ValueError("Could not build any document chunks from transcript.")
+
             store = vector_service.create_store(docs)
             vector_stores_cache[video_id] = store
-            logger.info(f"Successfully cached vector store for video {video_id}.")
+            logger.info(f"Cached vector store for {video_id}.")
         except Exception as e:
-            logger.error(f"Failed to create vector store for video {video_id}: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to process transcript and create vector store: {str(e)}"
-            )
+            logger.error(f"Failed to create vector store: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to process transcript: {str(e)}")
     else:
-        logger.info(f"Cache hit for video {video_id}. Reusing existing vector store.")
+        logger.info(f"Cache hit for {video_id}.")
 
     try:
         results = store.similarity_search(data.question, k=10)
     except Exception as e:
-        logger.error(f"Similarity search failed: {e}")
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
     if not results:
-        raise HTTPException(
-            status_code=404, 
-            detail="No relevant information found in the video transcript for your question."
-        )
+        raise HTTPException(status_code=404, detail="No relevant information found in the transcript.")
+
     try:
         answer = rag_service.answer_question(data.question, results)
     except Exception as e:
-        logger.error(f"Failed to generate answer from Groq: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"LLM generation failed. Please verify your GROQ_API_KEY in the .env file. Error: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"LLM generation failed: {str(e)}")
+
     start_time = results[0].metadata.get("start", 0)
     return {
         "answer": answer,

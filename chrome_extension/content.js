@@ -9,6 +9,57 @@
     return params.get("v");
   }
 
+  async function fetchTranscriptFromPage() {
+    try {
+      const scripts = document.querySelectorAll("script");
+      let playerResponse = null;
+
+      for (const script of scripts) {
+        if (script.textContent.includes("ytInitialPlayerResponse")) {
+          const match = script.textContent.match(/ytInitialPlayerResponse\s*=\s*(\{.+?\});/s);
+          if (match) {
+            playerResponse = JSON.parse(match[1]);
+            break;
+          }
+        }
+      }
+
+      if (!playerResponse) return null;
+
+      const captionTracks =
+        playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+
+      if (!captionTracks || captionTracks.length === 0) return null;
+
+      const track =
+        captionTracks.find((t) => t.languageCode === "en") ||
+        captionTracks.find((t) => t.languageCode?.startsWith("en")) ||
+        captionTracks[0];
+
+      const url = track.baseUrl + "&fmt=json3";
+      const res = await fetch(url);
+      const data = await res.json();
+
+      const transcript = (data.events || [])
+        .filter((e) => e.segs)
+        .map((e) => ({
+          text: e.segs
+            .map((s) => s.utf8 || "")
+            .join("")
+            .replace(/\n/g, " ")
+            .trim(),
+          start: (e.tStartMs || 0) / 1000,
+          duration: (e.dDurationMs || 0) / 1000,
+        }))
+        .filter((e) => e.text.trim().length > 0);
+
+      return transcript.length > 0 ? transcript : null;
+    } catch (err) {
+      console.error("[YT-RAG] Transcript fetch error:", err);
+      return null;
+    }
+  }
+
   function buildPanel() {
     const panel = document.createElement("div");
     panel.id = PANEL_ID;
@@ -170,7 +221,7 @@
 
     const videoId = getVideoId();
     if (!videoId) {
-      appendErrorMessage("No YouTube video detected on this page. Please navigate to a YouTube video first.");
+      appendErrorMessage("No YouTube video detected. Please navigate to a YouTube video first.");
       return;
     }
 
@@ -182,13 +233,26 @@
     appendThinking();
 
     try {
+      const transcript = await fetchTranscriptFromPage();
+
+      if (!transcript) {
+        removeThinking();
+        appendErrorMessage(
+          "Could not extract transcript from this video. Make sure the video has captions/subtitles enabled."
+        );
+        sendBtn.disabled = false;
+        input.focus();
+        return;
+      }
+
       const response = await fetch(BACKEND_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           video_url: `https://www.youtube.com/watch?v=${videoId}`,
-          question: question
-        })
+          question: question,
+          transcript: transcript,
+        }),
       });
 
       removeThinking();
@@ -206,13 +270,7 @@
       }
     } catch (err) {
       removeThinking();
-      if (err.name === "TypeError" && err.message.includes("fetch")) {
-        appendErrorMessage(
-          "Cannot connect to backend. Make sure the FastAPI server is running on http://localhost:8000 (run start.bat)."
-        );
-      } else {
-        appendErrorMessage(`Unexpected error: ${err.message}`);
-      }
+      appendErrorMessage(`Error: ${err.message}`);
     } finally {
       sendBtn.disabled = false;
       input.focus();
@@ -261,7 +319,7 @@
     observer.observe(document.querySelector("title") || document.head, {
       subtree: true,
       characterData: true,
-      childList: true
+      childList: true,
     });
   }
 
