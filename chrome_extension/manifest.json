@@ -3,16 +3,29 @@
   "name": "YouTube RAG Chatbot",
   "version": "1.0",
   "description": "Ask AI questions about any YouTube video using transcript-powered RAG.",
-  "permissions": ["activeTab", "scripting", "tabs"],
-  "host_permissions": ["https://www.youtube.com/*", "http://localhost:8000/*"],
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "http://localhost:8000/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["https://www.youtube.com/watch*"],
-      "js": ["content.js"],
-      "css": ["content.css"],
+      "matches": [
+        "https://www.youtube.com/watch*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
       "run_at": "document_idle"
     }
   ],
