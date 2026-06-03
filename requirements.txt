@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+langchain
+langchain-core
+langchain-community
+langchain-groq
+langchain-huggingface
+sentence-transformers
+faiss-cpu
+youtube-transcript-api
+python-dotenv
+pydantic
+tiktoken
+numpy
+pandas
+requests
+streamlit
