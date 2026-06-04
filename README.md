@@ -322,7 +322,6 @@ youtube_rag/
 ├── run.py                  # Entry point for the FastAPI backend
 ├── start.bat               # Windows batch script to start the servers
 ├── streamlit_app.py        # Streamlit frontend application
-├── test_rag.py             # Script for testing the RAG pipeline
 │
 ├── app/                    # FastAPI backend application code
 │   ├── config.py           # Configuration settings
@@ -339,8 +338,6 @@ youtube_rag/
 │   ├── manifest.json       # Extension configuration file
 │   └── icons/              # Extension icons
 │
-├── test/                   # Unit and integration tests
-│   └── test_api.py         # Tests for the API endpoints
 │
 └── venv/                   # Python virtual environment (ignored in git)
 
