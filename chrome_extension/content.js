@@ -4,10 +4,6 @@
 
   let currentVideoId = null;
 
-  /* ─────────────────────────────────────────────
-     Helpers
-  ───────────────────────────────────────────── */
-
   function getVideoId() {
     const params = new URLSearchParams(window.location.search);
     return params.get("v") || null;
@@ -16,10 +12,6 @@
   function isWatchPage() {
     return window.location.pathname === "/watch" && !!getVideoId();
   }
-
-  /* ─────────────────────────────────────────────
-     Panel UI
-  ───────────────────────────────────────────── */
 
   function buildPanel() {
     const panel = document.createElement("div");
@@ -182,10 +174,6 @@
       .replace(/"/g, "&quot;");
   }
 
-  /* ─────────────────────────────────────────────
-     Send handler — NO client-side transcript.
-     Backend fetches transcript via youtube-transcript-api.
-  ───────────────────────────────────────────── */
 
   async function handleSend() {
     const input = document.getElementById("yt-rag-input");
@@ -212,7 +200,6 @@
         response = await fetch(BACKEND_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          // transcript is omitted — backend fetches it via youtube-transcript-api
           body: JSON.stringify({
             video_url: `https://www.youtube.com/watch?v=${videoId}`,
             question: question,
@@ -250,10 +237,6 @@
     }
   }
 
-  /* ─────────────────────────────────────────────
-     Panel lifecycle
-  ───────────────────────────────────────────── */
-
   function ensurePanelExists() {
     let panel = document.getElementById(PANEL_ID);
     if (!panel) panel = buildPanel();
@@ -265,7 +248,6 @@
     updateVideoBar(videoId);
     showWelcome("New video detected!", "Ask me anything about this video.");
 
-    // Re-show the panel on new video navigation
     const panel = document.getElementById(PANEL_ID);
     if (panel) panel.style.display = "flex";
   }
@@ -279,13 +261,7 @@
     }
   }
 
-  /* ─────────────────────────────────────────────
-     Initialisation
-     Handles both direct navigation AND YouTube SPA.
-  ───────────────────────────────────────────── */
-
   function setupNavigationListeners() {
-    // YouTube fires this on SPA page transitions
     window.addEventListener("yt-navigate-finish", () => {
       if (isWatchPage()) {
         ensurePanelExists();
@@ -293,7 +269,6 @@
       }
     });
 
-    // Fallback: MutationObserver on <title>
     const titleEl = document.querySelector("title") || document.head;
     if (titleEl) {
       new MutationObserver(() => {

@@ -5,8 +5,6 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 class VectorStoreService:
 
     def __init__(self):
-        # Runs fully locally — no API key needed.
-        # Model is downloaded once (~90MB) and cached on first run.
         self.embeddings = HuggingFaceEmbeddings(
             model_name="sentence-transformers/all-MiniLM-L6-v2"
         )
