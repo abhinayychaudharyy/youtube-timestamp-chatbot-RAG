@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 
 class ChatRequest(BaseModel):
@@ -16,4 +16,4 @@ class TranscriptSegment(BaseModel):
 class ChatWithTranscriptRequest(BaseModel):
     video_url: str
     question: str
-    transcript: List[TranscriptSegment]
+    transcript: Optional[List[TranscriptSegment]] = None

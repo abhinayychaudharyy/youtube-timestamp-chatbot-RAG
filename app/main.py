@@ -46,35 +46,37 @@ def chat(data: ChatWithTranscriptRequest):
     store = vector_stores_cache.get(video_id)
 
     if not store:
-        logger.info(f"Cache miss for {video_id}. Building vector store from extension transcript...")
+        logger.info(f"Cache miss for {video_id}. Building vector store...")
         try:
             if not data.transcript:
-                raise ValueError("Transcript is empty.")
+                logger.info(f"No transcript provided in request. Fetching transcript from YouTube for {video_id}...")
+                raw_transcript = YouTubeService.get_transcript(data.video_url)
+                docs = YouTubeService.create_documents(raw_transcript)
+            else:
+                docs = []
+                current_text = ""
+                current_start = None
+                current_duration = 0.0
 
-            docs = []
-            current_text = ""
-            current_start = None
-            current_duration = 0.0
+                for seg in data.transcript:
+                    if current_start is None:
+                        current_start = seg.start
+                    current_text += seg.text + " "
+                    current_duration = seg.duration
 
-            for seg in data.transcript:
-                if current_start is None:
-                    current_start = seg.start
-                current_text += seg.text + " "
-                current_duration = seg.duration
+                    if len(current_text) >= 1000:
+                        docs.append(Document(
+                            page_content=current_text.strip(),
+                            metadata={"start": current_start, "duration": current_duration}
+                        ))
+                        current_text = ""
+                        current_start = None
 
-                if len(current_text) >= 1000:
+                if current_text.strip():
                     docs.append(Document(
                         page_content=current_text.strip(),
-                        metadata={"start": current_start, "duration": current_duration}
+                        metadata={"start": current_start or 0.0, "duration": current_duration}
                     ))
-                    current_text = ""
-                    current_start = None
-
-            if current_text.strip():
-                docs.append(Document(
-                    page_content=current_text.strip(),
-                    metadata={"start": current_start or 0.0, "duration": current_duration}
-                ))
 
             if not docs:
                 raise ValueError("Could not build any document chunks from transcript.")

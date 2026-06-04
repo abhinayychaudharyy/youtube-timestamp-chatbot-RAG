@@ -1,72 +1,25 @@
 (() => {
-  const BACKEND_URL = "https://youtube-timestamp-chatbot-rag-jqh0.onrender.com/chat";
+  const BACKEND_URL = "http://localhost:8000/chat";
   const PANEL_ID = "yt-rag-panel";
 
   let currentVideoId = null;
 
+  /* ─────────────────────────────────────────────
+     Helpers
+  ───────────────────────────────────────────── */
+
   function getVideoId() {
     const params = new URLSearchParams(window.location.search);
-    return params.get("v");
+    return params.get("v") || null;
   }
 
-  async function fetchTranscriptFromPage() {
-    return new Promise((resolve) => {
-      const script = document.createElement("script");
-      script.id = "yt-rag-extractor";
-      script.textContent = `
-        (function() {
-          try {
-            const data = window.ytInitialPlayerResponse;
-            document.dispatchEvent(new CustomEvent("yt-rag-player-data", {
-              detail: data ? JSON.stringify(data) : null
-            }));
-          } catch(e) {
-            document.dispatchEvent(new CustomEvent("yt-rag-player-data", { detail: null }));
-          }
-        })();
-      `;
-
-      document.addEventListener("yt-rag-player-data", async (e) => {
-        const existing = document.getElementById("yt-rag-extractor");
-        if (existing) existing.remove();
-
-        if (!e.detail) { resolve(null); return; }
-
-        try {
-          const playerResponse = JSON.parse(e.detail);
-          const captionTracks =
-            playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-
-          if (!captionTracks || captionTracks.length === 0) { resolve(null); return; }
-
-          const track =
-            captionTracks.find((t) => t.languageCode === "en") ||
-            captionTracks.find((t) => t.languageCode?.startsWith("en")) ||
-            captionTracks[0];
-
-          const url = track.baseUrl + "&fmt=json3";
-          const res = await fetch(url);
-          const data = await res.json();
-
-          const transcript = (data.events || [])
-            .filter((ev) => ev.segs)
-            .map((ev) => ({
-              text: ev.segs.map((s) => s.utf8 || "").join("").replace(/\n/g, " ").trim(),
-              start: (ev.tStartMs || 0) / 1000,
-              duration: (ev.dDurationMs || 0) / 1000,
-            }))
-            .filter((ev) => ev.text.trim().length > 0);
-
-          resolve(transcript.length > 0 ? transcript : null);
-        } catch (err) {
-          console.error("[YT-RAG] Transcript parse error:", err);
-          resolve(null);
-        }
-      }, { once: true });
-
-      document.head.appendChild(script);
-    });
+  function isWatchPage() {
+    return window.location.pathname === "/watch" && !!getVideoId();
   }
+
+  /* ─────────────────────────────────────────────
+     Panel UI
+  ───────────────────────────────────────────── */
 
   function buildPanel() {
     const panel = document.createElement("div");
@@ -96,7 +49,7 @@
         <div id="yt-rag-welcome">
           <div id="yt-rag-welcome-icon">🎬</div>
           <h3>Ask anything about this video</h3>
-          <p>I'll read the transcript and give you a detailed answer based on what was said in this video.</p>
+          <p>I'll fetch the transcript and give you a detailed answer based on what was said.</p>
         </div>
       </div>
 
@@ -130,21 +83,30 @@
       }
     });
 
-    document.getElementById("yt-rag-input").addEventListener("input", autoResizeTextarea);
+    document.getElementById("yt-rag-input").addEventListener("input", () => {
+      const ta = document.getElementById("yt-rag-input");
+      ta.style.height = "auto";
+      ta.style.height = Math.min(ta.scrollHeight, 100) + "px";
+    });
 
     return panel;
   }
 
-  function autoResizeTextarea() {
-    const ta = document.getElementById("yt-rag-input");
-    ta.style.height = "auto";
-    ta.style.height = Math.min(ta.scrollHeight, 100) + "px";
-  }
-
   function updateVideoBar(videoId) {
     const bar = document.getElementById("yt-rag-video-id-text");
-    if (bar) {
-      bar.textContent = videoId ? `Video: ${videoId}` : "No video detected";
+    if (bar) bar.textContent = videoId ? `Video: ${videoId}` : "No video detected";
+  }
+
+  function showWelcome(title, msg) {
+    const messages = document.getElementById("yt-rag-messages");
+    if (messages) {
+      messages.innerHTML = `
+        <div id="yt-rag-welcome">
+          <div id="yt-rag-welcome-icon">🎬</div>
+          <h3>${title}</h3>
+          <p>${msg || "Ask me anything about this video."}</p>
+        </div>
+      `;
     }
   }
 
@@ -184,13 +146,13 @@
     const row = document.createElement("div");
     row.className = "yt-rag-msg-row yt-rag-msg-ai";
 
-    const formattedAnswer = answer
+    const formatted = answer
       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
       .replace(/\n/g, "<br>");
 
     row.innerHTML = `
       <div class="yt-rag-bubble yt-rag-bubble-ai">
-        ${formattedAnswer}
+        ${formatted}
         ${timestamp ? `
           <br>
           <a class="yt-rag-timestamp-link" href="${ytLink}" target="_blank">
@@ -220,11 +182,15 @@
       .replace(/"/g, "&quot;");
   }
 
+  /* ─────────────────────────────────────────────
+     Send handler — NO client-side transcript.
+     Backend fetches transcript via youtube-transcript-api.
+  ───────────────────────────────────────────── */
+
   async function handleSend() {
     const input = document.getElementById("yt-rag-input");
     const sendBtn = document.getElementById("yt-rag-send-btn");
     const question = input.value.trim();
-
     if (!question) return;
 
     const videoId = getVideoId();
@@ -241,27 +207,26 @@
     appendThinking();
 
     try {
-      const transcript = await fetchTranscriptFromPage();
-
-      if (!transcript) {
+      let response;
+      try {
+        response = await fetch(BACKEND_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          // transcript is omitted — backend fetches it via youtube-transcript-api
+          body: JSON.stringify({
+            video_url: `https://www.youtube.com/watch?v=${videoId}`,
+            question: question,
+          }),
+        });
+      } catch (netErr) {
         removeThinking();
         appendErrorMessage(
-          "Could not extract transcript from this video. Make sure the video has captions/subtitles enabled."
+          "Cannot reach backend. Make sure the server is running (python run.py on port 8000)."
         );
         sendBtn.disabled = false;
         input.focus();
         return;
       }
-
-      const response = await fetch(BACKEND_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          video_url: `https://www.youtube.com/watch?v=${videoId}`,
-          question: question,
-          transcript: transcript,
-        }),
-      });
 
       removeThinking();
 
@@ -285,50 +250,70 @@
     }
   }
 
-  function initPanel() {
+  /* ─────────────────────────────────────────────
+     Panel lifecycle
+  ───────────────────────────────────────────── */
+
+  function ensurePanelExists() {
     let panel = document.getElementById(PANEL_ID);
-    if (!panel) {
-      panel = buildPanel();
-    }
-
-    const videoId = getVideoId();
-    currentVideoId = videoId;
-    updateVideoBar(videoId);
-
+    if (!panel) panel = buildPanel();
     return panel;
   }
 
-  function handleNavigation() {
-    const videoId = getVideoId();
-    if (videoId && videoId !== currentVideoId) {
-      currentVideoId = videoId;
-      updateVideoBar(videoId);
+  function onVideoChange(videoId) {
+    currentVideoId = videoId;
+    updateVideoBar(videoId);
+    showWelcome("New video detected!", "Ask me anything about this video.");
 
-      const messages = document.getElementById("yt-rag-messages");
-      if (messages) {
-        messages.innerHTML = `
-          <div id="yt-rag-welcome">
-            <div id="yt-rag-welcome-icon">🎬</div>
-            <h3>New video detected!</h3>
-            <p>Ask me anything about this video. I'll analyze the transcript and answer in detail.</p>
-          </div>
-        `;
+    // Re-show the panel on new video navigation
+    const panel = document.getElementById(PANEL_ID);
+    if (panel) panel.style.display = "flex";
+  }
+
+  function checkForVideoChange() {
+    if (!isWatchPage()) return;
+    const videoId = getVideoId();
+    if (!videoId) return;
+    if (videoId !== currentVideoId) {
+      onVideoChange(videoId);
+    }
+  }
+
+  /* ─────────────────────────────────────────────
+     Initialisation
+     Handles both direct navigation AND YouTube SPA.
+  ───────────────────────────────────────────── */
+
+  function setupNavigationListeners() {
+    // YouTube fires this on SPA page transitions
+    window.addEventListener("yt-navigate-finish", () => {
+      if (isWatchPage()) {
+        ensurePanelExists();
+        checkForVideoChange();
       }
+    });
+
+    // Fallback: MutationObserver on <title>
+    const titleEl = document.querySelector("title") || document.head;
+    if (titleEl) {
+      new MutationObserver(() => {
+        if (isWatchPage()) {
+          ensurePanelExists();
+          checkForVideoChange();
+        }
+      }).observe(titleEl, { subtree: true, characterData: true, childList: true });
     }
   }
 
   function init() {
-    initPanel();
-
-    const observer = new MutationObserver(() => {
-      handleNavigation();
-    });
-
-    observer.observe(document.querySelector("title") || document.head, {
-      subtree: true,
-      characterData: true,
-      childList: true,
-    });
+    if (isWatchPage()) {
+      const panel = ensurePanelExists();
+      const videoId = getVideoId();
+      currentVideoId = videoId;
+      updateVideoBar(videoId);
+      panel.style.display = "flex";
+    }
+    setupNavigationListeners();
   }
 
   if (document.readyState === "loading") {
