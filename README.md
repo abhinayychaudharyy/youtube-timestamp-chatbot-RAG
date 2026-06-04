@@ -313,27 +313,37 @@ Benefits:
 # 📁 Project Structure
 
 ```text
-youtube-ai-chatbot/
+youtube_rag/
+├── .env                    # Environment variables (API keys)
+├── .gitignore              # Files to ignore in Git
+├── README.md               # Project documentation
+├── reqirements.txt         # (Typo) Python dependencies list
+├── requirements.txt        # Python dependencies list
+├── run.py                  # Entry point for the FastAPI backend
+├── start.bat               # Windows batch script to start the servers
+├── streamlit_app.py        # Streamlit frontend application
+├── test_rag.py             # Script for testing the RAG pipeline
 │
-├── app/
-│   ├── main.py
-│   ├── config.py
-│   │
-│   ├── models/
-│   │   └── schema.py
-│   │
-│   ├── services/
-│   │   ├── youtube_service.py
-│   │   ├── vector_store.py
-│   │   └── rag_service.py
-│   │
-│   └── utils/
-│       └── timestamp.py
+├── app/                    # FastAPI backend application code
+│   ├── config.py           # Configuration settings
+│   ├── main.py             # FastAPI app initialization and routes
+│   ├── models/             # Pydantic data models
+│   ├── routes/             # API route handlers
+│   ├── services/           # Business logic (e.g., rag_service.py, vector_store.py)
+│   └── utils/              # Helper functions and utilities
 │
-├── requirements.txt
-├── .env
-├── run.py
-└── README.md
+├── chrome_extension/       # Chrome Extension code
+│   ├── background.js       # Extension background service worker
+│   ├── content.css         # Styles for the YouTube chat panel
+│   ├── content.js          # Injects the chat interface into YouTube pages
+│   ├── manifest.json       # Extension configuration file
+│   └── icons/              # Extension icons
+│
+├── test/                   # Unit and integration tests
+│   └── test_api.py         # Tests for the API endpoints
+│
+└── venv/                   # Python virtual environment (ignored in git)
+
 ```
 
 ---
